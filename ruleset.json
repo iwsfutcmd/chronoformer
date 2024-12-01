@@ -1,0 +1,9 @@
+[
+  { "from": "a", "to": "z" },
+  { "from": "b", "to": "z" },
+  { "from": "c", "to": "y" },
+  { "from": "de", "to": "x" },
+  { "from": "f", "to": "vw" },
+  { "from": "a", "to": "u" },
+  { "from": "z", "to": "g" }
+]
