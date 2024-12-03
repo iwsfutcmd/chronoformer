@@ -1,30 +1,43 @@
 import json
 
-sem_hbo = json.load(open("sem-hbo.json"))
-# backwards_test_rules = json.load(open("backwards_test_ruleset.json"))
-input_string = "abcdef"
+sem_hbo = json.load(open("sem-hbo_Latn.json"))
 
+def tokenize(string, tokens):
+    tokens = sorted(tokens, key=len, reverse=True)
+
+    output = []
+    i = 0
+    while i < len(string):
+        match_found = False
+        for token in tokens:
+            if string[i:i+len(token)] == token:
+                output.append(token)
+                i += len(token)
+                match_found = True
+                break
+        if not match_found:
+            return None
+    return tuple(output)
 
 def transform_forward(string, rules):
-    output = string
-    i = 0
-    while i < len(output):
-        found = False
-        for rule in rules:
-            f = rule["from"]
-            t = rule["to"]
-            if output[i : i + len(f)] == f:
-                output = output[:i] + t + output[i + len(f) :]
+    f_inv = rules["inventory"]["from"]
+    t_inv = rules["inventory"]["to"]
+    output = tokenize(string, f_inv)
+    for rule in rules["rules"]:
+        f = tokenize(rule["from"], f_inv)
+        t = tokenize(rule["to"], t_inv)
+        i = 0
+        while i < len(output):
+            if output[i:i + len(f)] == f:
+                output = output[:i] + t + output[i + len(f):]
                 i += len(t)
-                found = True
-        if not found:
-            i += 1
-    return output
-
+            else:
+                i += 1
+    return "".join(output)
 
 def transform_backward(string, rules):
     outputs = set([string])
-    for rule in rules:
+    for rule in rules["rules"]:
         f = rule["from"]
         t = rule["to"]
         new_outputs = {output.replace(t, f) for output in outputs}
@@ -46,7 +59,7 @@ def transform_backward(string, rules):
     return outputs
 
 
-forward_testcases = [("pʕl", "פעל"), ("ɣwθ", "עושׁ")]
+forward_testcases = [("pʕl", "pʕl"), ("ɣwθ", "ʕwʃ")]
 
 
 def test_transform_forward():
@@ -59,7 +72,7 @@ def test_transform_forward():
 
 backward_testcases = [
     (
-        "עושׁ",
+        "ʕwʃ",
         {
             "ʕwʃ",
             "ʕwθ",
@@ -70,9 +83,21 @@ backward_testcases = [
 ]
 
 
-def test_transform_forward():
+def test_transform_backward():
     for i, o in backward_testcases:
         t = transform_backward(i, sem_hbo)
         print(f"{i} -> {t}")
         if o != t:
             raise ValueError(f"{i} -> should be ({o}), is ({t})")
+
+tokenizer_testcases = [
+    ("sʼpr", ["sʼ", "p", "r"]),
+    ("sʼpʼr", None),
+    ("sʼfr", None)
+]
+
+def test_tokenizer():
+    for i, o in tokenizer_testcases:
+        t = tokenize(i, sem_hbo["inventory"]["from"])
+        if o != t:
+            raise ValueError(f"{i} tokenized as {t}, should be {o}")
