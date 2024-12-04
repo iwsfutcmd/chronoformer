@@ -29,7 +29,7 @@ def tokenize(string, tokens):
                 match_found = True
                 break
         if not match_found:
-            return None
+            raise ValueError("string contains untokenizable elements")
     return tuple(output)
 
 
@@ -105,7 +105,7 @@ def test_transform_backward():
             raise ValueError(f"{i} -> should be ({o}), is ({t})")
 
 
-tokenizer_testcases = [("sʼpr", ["sʼ", "p", "r"]), ("sʼpʼr", None), ("sʼfr", None)]
+tokenizer_testcases = [("sʼpr", ("sʼ", "p", "r")), ("sʼpʼr", None), ("sʼfr", None)]
 
 
 def test_tokenizer():
