@@ -1,9 +1,22 @@
 import json
+import re
 
 sem_hbo = json.load(open("sem-hbo_Latn.json"))
 sem_arb = json.load(open("sem-arb_Latn.json"))
 sem_gez = json.load(open("sem-gez_Latn.json"))
+sem_gez_chrono = open("sem-gez_Latn.chrono").read()
 
+def parse_chrono(chrono):
+    rules = {"inventory": {"from": [], "to": []}, "rules": []}
+    entries = chrono.split(";")
+    for entry in entries:
+        if m := re.search(r"^\s*<\s*\{(.*)\}\s*$", entry):
+            rules["inventory"]["from"] = re.split(r"\s+", m.group(1))
+        elif m := re.search(r"^\s*>\s*\{(.*)\}\s*$", entry):
+            rules["inventory"]["to"] = re.split(r"\s+", m.group(1))
+        elif m := re.search(r"^\s*(.+?)\s*>\s*(.+?)\s*$", entry):
+            rules["rules"].append({"from": m.group(1), "to": m.group(2)})
+    return rules
 
 def make_inv(rules):
     from_inv = set()
