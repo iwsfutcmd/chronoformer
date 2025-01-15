@@ -1,10 +1,9 @@
 import json
 import re
 
-sem_hbo = json.load(open("sem-hbo_Latn.json"))
+sem_hbo = open("sem-hbo_Latn.chrono")
 sem_arb = json.load(open("sem-arb_Latn.json"))
-sem_gez = json.load(open("sem-gez_Latn.json"))
-sem_gez_chrono = open("sem-gez_Latn.chrono").read()
+sem_gez = open("sem-gez_Latn.chrono").read()
 
 def parse_chrono(chrono):
     rules = {"inventory": {"from": [], "to": []}, "rules": []}
@@ -14,9 +13,21 @@ def parse_chrono(chrono):
             rules["inventory"]["from"] = re.split(r"\s+", m.group(1))
         elif m := re.search(r"^\s*>\s*\{(.*)\}\s*$", entry):
             rules["inventory"]["to"] = re.split(r"\s+", m.group(1))
-        elif m := re.search(r"^\s*(.+?)\s*>\s*(.+?)\s*$", entry):
-            rules["rules"].append({"from": m.group(1), "to": m.group(2)})
+        elif m := re.search(r"^\s*(.+?)\s*>\s*(.+?)\s*(?:/\s*(.+?)?_(.+?)?)?$", entry):
+            rule = {"from": m.group(1), "to": m.group(2), "pre": m.group(3), "post": m.group(4)}
+            rules["rules"].append(rule)
     return rules
+
+def unparse_chrono(rules):
+    chrono = ""
+    chrono += "< {" + " ".join(rules["inventory"]["from"]) + "};\n"
+    chrono += "> {" + " ".join(rules["inventory"]["to"]) + "};\n"
+    for rule in rules["rules"]:
+        chrono += rule["from"] + " > " + rule["to"]
+        if rule["pre"] or rule["post"]:
+            chrono += " / " + rule["pre"] or "" + "_" + rule["post"] or ""
+        chrono += ";\n"
+    return chrono
 
 def make_inv(rules):
     from_inv = set()
@@ -29,7 +40,7 @@ def make_inv(rules):
 
 
 def tokenize(string, tokens):
-    tokens = sorted(tokens, key=len, reverse=True)
+    tokens = sorted(tokens + ["#"], key=len, reverse=True)
 
     output = []
     i = 0
@@ -49,17 +60,26 @@ def tokenize(string, tokens):
 def transform_forward(string, rules):
     f_inv = rules["inventory"]["from"]
     t_inv = rules["inventory"]["to"]
-    output = tokenize(string, f_inv)
+    output = ("#", *tokenize(string, f_inv), "#")
     for rule in rules["rules"]:
         f = tokenize(rule["from"], f_inv)
         t = tokenize(rule["to"], t_inv)
+        try:
+            pre = tokenize(rule["pre"], t_inv)
+        except KeyError:
+            pre = ()
+        try:
+            post = tokenize(rule["post"], t_inv)
+        except KeyError:
+            post = ()
         i = 0
         while i < len(output):
-            if output[i : i + len(f)] == f:
-                output = output[:i] + t + output[i + len(f) :]
+            if i - len(pre) >= 0 and i + len(post) <= len(output) and output[i-len(pre):i+len(f)+len(post)] == pre + f + post:
+                output = output[:i] + t + output[i+len(f):]
                 i += len(t)
             else:
                 i += 1
+    output = output[1:-1]
     return "".join(output)
 
 
@@ -74,8 +94,8 @@ def transform_backward(string, rules, comprehensive=True):
         for output in outputs:
             i = 0
             while i < len(output):
-                if output[i : i + len(f)] == f:
-                    new_output = output[:i] + t + output[i + len(f) :]
+                if output[i:i+len(f)] == f:
+                    new_output = output[:i] + t + output[i+len(f):]
                     new_outputs.add(new_output)
                     i += len(t)
                 else:
