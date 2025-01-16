@@ -1,10 +1,6 @@
 import json
 import re
 
-sem_hbo = open("sem-hbo_Latn.chrono")
-sem_arb = json.load(open("sem-arb_Latn.json"))
-sem_gez = open("sem-gez_Latn.chrono").read()
-
 def parse_chrono(chrono):
     rules = {"inventory": {"from": [], "to": []}, "rules": []}
     entries = chrono.split(";")
@@ -58,29 +54,31 @@ def tokenize(string, tokens):
 
 
 def transform_forward(string, rules):
-    f_inv = rules["inventory"]["from"]
-    t_inv = rules["inventory"]["to"]
-    output = ("#", *tokenize(string, f_inv), "#")
+    inv = rules["inventory"]["from"] + rules["inventory"]["to"]
+    outputs = {("#", *tokenize(string, inv), "#")}
     for rule in rules["rules"]:
-        f = tokenize(rule["from"], f_inv)
-        t = tokenize(rule["to"], t_inv)
+        f = tokenize(rule["from"], inv)
+        t = tokenize(rule["to"], inv)
         try:
-            pre = tokenize(rule["pre"], t_inv)
-        except KeyError:
+            pre = tokenize(rule["pre"], inv)
+        except TypeError:
             pre = ()
         try:
-            post = tokenize(rule["post"], t_inv)
-        except KeyError:
+            post = tokenize(rule["post"], inv)
+        except TypeError:
             post = ()
-        i = 0
-        while i < len(output):
-            if i - len(pre) >= 0 and i + len(post) <= len(output) and output[i-len(pre):i+len(f)+len(post)] == pre + f + post:
-                output = output[:i] + t + output[i+len(f):]
-                i += len(t)
-            else:
-                i += 1
-    output = output[1:-1]
-    return "".join(output)
+        new_outputs = set()
+        for output in outputs:
+            i = 0
+            while i < len(output):
+                if i - len(pre) >= 0 and i + len(post) <= len(output) and output[i-len(pre):i+len(f)+len(post)] == pre + f + post:
+                    new_output = output[:i] + t + output[i+len(f):]
+                    new_outputs.add(new_output)
+                    i += len(t)
+                else:
+                    i += 1
+        outputs.update(new_outputs)
+    return {"".join(output[1:-1]) for output in outputs}
 
 
 def transform_backward(string, rules, comprehensive=True):
@@ -105,6 +103,9 @@ def transform_backward(string, rules, comprehensive=True):
         outputs = {output for output in outputs if set(output) <= set(f_inv)}
     return {"".join(output) for output in outputs}
 
+sem_hbo = parse_chrono(open("sem-hbo_Latn.chrono").read())
+sem_arb = json.load(open("sem-arb_Latn.json"))
+sem_gez = parse_chrono(open("sem-gez_Latn.chrono").read())
 
 forward_testcases = [("pʕl", "pʕl"), ("ɣwθ", "ʕwʃ")]
 
