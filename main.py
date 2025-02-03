@@ -1,6 +1,7 @@
 import json
 import re
 
+
 def parse_chrono(chrono):
     rules = {"inventory": {"from": [], "to": []}, "rules": []}
     entries = chrono.split(";")
@@ -10,9 +11,15 @@ def parse_chrono(chrono):
         elif m := re.search(r"^\s*>\s*\{(.*)\}\s*$", entry):
             rules["inventory"]["to"] = re.split(r"\s+", m.group(1))
         elif m := re.search(r"^\s*(.+?)\s*>\s*(.+?)\s*(?:/\s*(.+?)?_(.+?)?)?$", entry):
-            rule = {"from": m.group(1), "to": m.group(2), "pre": m.group(3), "post": m.group(4)}
+            rule = {
+                "from": m.group(1),
+                "to": m.group(2),
+                "pre": m.group(3),
+                "post": m.group(4),
+            }
             rules["rules"].append(rule)
     return rules
+
 
 def unparse_chrono(rules):
     chrono = ""
@@ -24,6 +31,7 @@ def unparse_chrono(rules):
             chrono += " / " + rule["pre"] or "" + "_" + rule["post"] or ""
         chrono += ";\n"
     return chrono
+
 
 def make_inv(rules):
     from_inv = set()
@@ -67,17 +75,23 @@ def transform_forward(string, rules):
             post = tokenize(rule["post"], inv)
         except TypeError:
             post = ()
-        new_outputs = set()
-        for output in outputs:
-            i = 0
-            while i < len(output):
-                if i - len(pre) >= 0 and i + len(post) <= len(output) and output[i-len(pre):i+len(f)+len(post)] == pre + f + post:
-                    new_output = output[:i] + t + output[i+len(f):]
-                    new_outputs.add(new_output)
-                    i += len(t)
+        new_outputs = list(outputs)
+        for o_i in range(len(new_outputs)):
+            c_i = 0
+            while c_i < len(new_outputs[o_i]):
+                if (
+                    c_i - len(pre) >= 0
+                    and c_i + len(post) <= len(new_outputs[o_i])
+                    and new_outputs[o_i][c_i - len(pre) : c_i + len(f) + len(post)]
+                    == pre + f + post
+                ):
+                    new_outputs[o_i] = (
+                        new_outputs[o_i][:c_i] + t + new_outputs[o_i][c_i + len(f) :]
+                    )
+                    c_i += len(t)
                 else:
-                    i += 1
-        outputs.update(new_outputs)
+                    c_i += 1
+        outputs = set(new_outputs)
     return {"".join(output[1:-1]) for output in outputs}
 
 
@@ -92,8 +106,8 @@ def transform_backward(string, rules, comprehensive=True):
         for output in outputs:
             i = 0
             while i < len(output):
-                if output[i:i+len(f)] == f:
-                    new_output = output[:i] + t + output[i+len(f):]
+                if output[i : i + len(f)] == f:
+                    new_output = output[:i] + t + output[i + len(f) :]
                     new_outputs.add(new_output)
                     i += len(t)
                 else:
@@ -102,6 +116,7 @@ def transform_backward(string, rules, comprehensive=True):
     if comprehensive:
         outputs = {output for output in outputs if set(output) <= set(f_inv)}
     return {"".join(output) for output in outputs}
+
 
 sem_hbo = parse_chrono(open("sem-hbo_Latn.chrono").read())
 sem_arb = json.load(open("sem-arb_Latn.json"))
