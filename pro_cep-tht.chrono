@@ -1,0 +1,7 @@
+< {p t k m n ŋ f h w r a e i o u};
+> {p t ʔ m n f h v r a e i o u};
+k > ʔ;
+ŋ > ʔ;
+f > v / #_af;
+f > h / [aeiou]_[aeiou];
+f > h / _[ou];
