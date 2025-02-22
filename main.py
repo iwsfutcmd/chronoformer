@@ -98,10 +98,19 @@ def transform_forward(string, rules):
 def transform_backward(string, rules, comprehensive=True):
     f_inv = rules["inventory"]["from"]
     t_inv = rules["inventory"]["to"]
-    outputs = {tokenize(string, t_inv)}
+    inv = f_inv + t_inv
+    outputs = {("#", *tokenize(string, t_inv), "#")}
     for rule in rules["rules"]:
-        t = tokenize(rule["from"], f_inv)
-        f = tokenize(rule["to"], t_inv)
+        t = tokenize(rule["from"], inv)
+        f = tokenize(rule["to"], inv)
+        try:
+            pre = tokenize(rule["pre"], inv)
+        except TypeError:
+            pre = ()
+        try:
+            post = tokenize(rule["post"], inv)
+        except TypeError:
+            post = ()
         new_outputs = set()
         for output in outputs:
             i = 0
@@ -119,7 +128,7 @@ def transform_backward(string, rules, comprehensive=True):
 
 
 sem_hbo = parse_chrono(open("sem-hbo_Latn.chrono").read())
-sem_arb = json.load(open("sem-arb_Latn.json"))
+sem_arb = parse_chrono(open("sem-arb_Latn.chrono").read())
 sem_gez = parse_chrono(open("sem-gez_Latn.chrono").read())
 
 forward_testcases = [("pʕl", "pʕl"), ("ɣwθ", "ʕwʃ")]
