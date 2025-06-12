@@ -122,6 +122,7 @@ def transform_backward(string, rules, comprehensive=True):
                 else:
                     i += 1
         outputs.update(new_outputs)
+    outputs = {output[1:-1] for output in outputs}
     if comprehensive:
         outputs = {output for output in outputs if set(output) <= set(f_inv)}
     return {"".join(output) for output in outputs}
